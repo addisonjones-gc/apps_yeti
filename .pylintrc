@@ -1,0 +1,6 @@
+[MASTER]
+extension-pkg-whitelist=pydantic
+load-plugins=pylint_protobuf
+disable=
+    missing-module-docstring,
+    too-few-public-methods,

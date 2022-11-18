@@ -1,0 +1,8 @@
+__pycache__/
+*.py[cod]
+.vscode/
+TODO.md
+local_testing/
+.pytest_cache
+.DS_Store
+*sample*
