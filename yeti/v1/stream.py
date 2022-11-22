@@ -1,11 +1,13 @@
 # pylint: disable=no-member
 from datetime import datetime
+from typing import List
 from fastapi import HTTPException
 from google.api_core.exceptions import InvalidArgument
 from google.cloud.bigquery_storage_v1beta2 import BigQueryWriteClient, types
 from yeti.core.pkg.message_template import StreamMessageTemplate
 
-from yeti.core.pkg.utils import get_logger, add_ingest_time_to_json
+from yeti.core.pkg.utils import get_logger
+from yeti.core.constants import TABLE_PARTITION_FIELD_NAME
 
 logger = get_logger()
 
@@ -16,7 +18,7 @@ def stream_json_to_bigquery(
     bq_dataset_id: str,
     bq_table_id: str,
     json_schema: dict,
-    json_data: str,
+    json_dict_list: List[dict],
 ):
     """Method to stream JSON data into a BigQuery table
        using the Storage Write API
@@ -32,8 +34,8 @@ def stream_json_to_bigquery(
     :param json_schema: A dict containing a "key": "value" pair outlined in the
                         YetiRequest type
     :type json_schema: dict
-    :param json_data: A JSON serializable string
-    :type json_data: str
+    :param json_dict_list: A JSON serializable list
+    :type json_dict_list: List
     :raises HTTPException: Invalid arg in JSON payload
     """
     write_stream = (
@@ -42,12 +44,10 @@ def stream_json_to_bigquery(
     )
 
     json_protobuf_template = StreamMessageTemplate(json_schema)
-    # input_json = add_ingest_time_to_json(json_data=json_data)
-    input_json = json_data
     append_requests = []
     append_request = create_append_request(
         message_template=json_protobuf_template,
-        input_json_str=input_json,
+        input_json=json_dict_list,
         write_stream=write_stream,
     )
     append_requests.append(append_request)
@@ -69,7 +69,7 @@ def stream_json_to_bigquery(
 
 def create_append_request(
     message_template: StreamMessageTemplate,
-    input_json_str: str,
+    input_json: List,
     write_stream: str,
 ) -> types.AppendRowsRequest:
     """Function to generate an AppendRowsRequest passed to the
@@ -78,8 +78,8 @@ def create_append_request(
     :param message_template: A StreamMessageTemplate object to serialize the
                              JSON data
     :type message_template: StreamMessageTemplate
-    :param input_json_str: A serializable JSON string
-    :type input_json_str: str
+    :param input_json_str: A JSON List
+    :type input_json_str: List
     :param write_stream: The write_stream string to pass as a requirement of the
                          AppendRowsRequest creation
     :type write_stream: str
@@ -87,7 +87,8 @@ def create_append_request(
     :rtype: types.AppendRowsRequest
     """
 
-    serialized_rows = message_template.json_to_serialized_data(input_json_str)
+    # Serialize input_json to protobuf bytes
+    serialized_rows = message_template.json_to_serialized_data(input_json)
     proto_rows = types.ProtoRows()
     proto_rows.serialized_rows.extend(serialized_rows)
 

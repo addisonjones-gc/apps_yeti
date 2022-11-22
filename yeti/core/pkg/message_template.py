@@ -1,13 +1,10 @@
 # pylint: disable=no-name-in-module
 # pylint: disable=no-member
-import json
-
 from collections import OrderedDict
+from typing import List
 
 from google.cloud.bigquery_storage_v1beta2 import types
-
 from google.protobuf import descriptor_pb2
-
 from google.protobuf.descriptor_pb2 import FieldDescriptorProto
 from google.protobuf.proto_builder import MakeSimpleProtoClass
 
@@ -54,10 +51,8 @@ class StreamMessageTemplate:
 
         # if "_PARTITIONTIME" not in proto_fields:
         #     proto_fields.update({"_PARTITIONTIME": FieldDescriptorProto.TYPE_STRING})
-        # print(proto_fields)
 
         return MakeSimpleProtoClass(
-            # Set datatype to mapping value
             fields=proto_fields,
             full_name="yeti.DynamicClass",
         )
@@ -91,19 +86,16 @@ class StreamMessageTemplate:
 
         return types.TableSchema(fields=table_field_schema_list)
 
-    def json_to_serialized_data(self, input_json_str: str) -> bytes:
+    def json_to_serialized_data(self, input_json: List[dict]) -> bytes:
         """Method to convert JSON data into byte serialized data for a
            protobuf message
 
-        :param input_json_str: JSON serializable string
-        :type input_json_str: str
-        :return: _description_
+        :param input_json: JSON serializable List
+        :type input_json_str: List
+        :return: Returns input_json as serialized bytes in protobuf format
         :rtype: bytes
         """
-        input_json = json.loads(input_json_str)
         # Handle if single row of JSON is passed
-        if isinstance(input_json, dict):
-            input_json = [input_json]
 
         message_obj = self.message_class()
         serialized_data = []

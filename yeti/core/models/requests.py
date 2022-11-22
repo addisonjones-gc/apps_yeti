@@ -22,7 +22,7 @@ class YetiRequest(BaseModel):
            {
              "id": "STRING",
              "created_time": "TIMESTAMP",
-             "loan_id": "NUMBER"
+             "loan_id": "INT64"
            }
 
     :param json_data List: A JSON serializable list containing key: value pairs

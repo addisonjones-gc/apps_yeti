@@ -1,6 +1,3 @@
-import json
-import logging
-
 from fastapi import FastAPI, HTTPException
 
 from google.cloud.bigquery_storage_v1beta2 import BigQueryWriteClient
@@ -8,16 +5,14 @@ from google.cloud.bigquery import Client as BQ_Client
 from google.api_core.exceptions import NotFound
 
 from yeti.core.models.requests import YetiRequest
+from yeti.core.pkg.utils import get_logger, ensure_dict_list
 from yeti.v1.stream import stream_json_to_bigquery
 from yeti.v1.load import load_json_to_bigquery
-from yeti.core.pkg.utils import get_logger
 
 logger = get_logger()
 
 HOST = "http://127.0.0.1"
 PORT = "8000"
-
-HOSTNAME = f"{HOST}:{PORT}"
 
 bq_stream_write_client = BigQueryWriteClient()
 bq_client = BQ_Client()
@@ -95,23 +90,16 @@ async def stream_json(stream_request: YetiRequest) -> dict:
     else:
         new_request_fields = list(stream_request.json_schema)
 
-    try:
-        request_json_str = json.dumps(stream_request.json_data)
+    json_dict_list = ensure_dict_list(stream_request.json_data)
 
-    except json.JSONDecodeError as json_decode_error:
-        logging.error(json_decode_error)
-        raise HTTPException(
-            400, detail="Could not deserialize JSON"
-        ) from json_decode_error
-
-    if table_exists or len(new_request_fields) == 0:
+    if table_exists and len(new_request_fields) == 0:
         stream_json_to_bigquery(
             bq_stream_write_client=bq_stream_write_client,
             bq_project_id=stream_request.bq_project_id,
             bq_dataset_id=stream_request.bq_dataset_id,
             bq_table_id=stream_request.bq_table_id,
             json_schema=stream_request.json_schema,
-            json_data=request_json_str,
+            json_dict_list=json_dict_list,
         )
         upload_method = "STREAM"
 
@@ -121,13 +109,14 @@ async def stream_json(stream_request: YetiRequest) -> dict:
             bq_dataset_id=stream_request.bq_dataset_id,
             bq_table_id=stream_request.bq_table_id,
             json_schema=stream_request.json_schema,
-            json_data=request_json_str,
+            json_dict_list=json_dict_list,
         )
         upload_method = "LOAD"
         new_fields_added_string = f"New fields added:{new_request_fields}"
+
     return {
         "message": (
-            f"{len(stream_request.json_data)} rows uploaded via {upload_method} to {table_full_path}"
+            f"{len(json_dict_list)} rows uploaded via {upload_method} to {table_full_path}"
             f"\n{new_fields_added_string if len(new_request_fields) > 0 else ''}"
         )
     }
